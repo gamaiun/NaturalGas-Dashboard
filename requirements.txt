@@ -1,0 +1,7 @@
+streamlit
+datetime
+pandas
+dash
+plotly
+numpy
+tables
