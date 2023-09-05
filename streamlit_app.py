@@ -64,7 +64,7 @@ st.markdown(  """
 """, unsafe_allow_html=True)
 
 #side bar
-st.sidebar.image("data/logo1.png")
+st.sidebar.image("datas/logo1.png")
 st.markdown(page_bg_img, unsafe_allow_html=True)
 
 st.markdown("""
