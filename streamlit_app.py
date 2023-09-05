@@ -12,8 +12,8 @@ today_day = TODAY.strftime('%Y-%m-%d')
 st.set_page_config(layout="wide", page_title="Natural Gas Analysis")
 
 ##########  CREATING DATASETS ###############
-comcot_reports = pd.read_hdf('./data/main.h5', key='natgas_cots',)
-natgas_yf = pd.read_hdf('./data/main.h5', key='natgas', )
+comcot_reports = pd.read_hdf('./data/dash_storage.h5', key='natgas_cots',)
+natgas_yf = pd.read_hdf('./data/dash_storage.h5', key='natgas', )
 comcot_reports.index = comcot_reports.index.set_levels(pd.to_datetime(comcot_reports.index.levels[1], format="%Y-%m-%d"), level=1)
 com_starting_date = natgas_yf.index.min()
 com_ending_date = natgas_yf.index.max()
@@ -103,7 +103,7 @@ column = st.sidebar.columns((1, 1))
 
 
 with column[0]:
-    start_nat = st.date_input(label="**FROM**", value=pd.to_datetime("2016-01-31", format="%Y-%m-%d"), label_visibility="collapsed")
+    start_nat = st.date_input(label="**FROM**", value=pd.to_datetime("2019-01-31", format="%Y-%m-%d"), label_visibility="collapsed")
 with column[1]:
     end_nat = st.date_input(label="**TO**", value=pd.to_datetime(today_day, ), label_visibility="collapsed")
 
