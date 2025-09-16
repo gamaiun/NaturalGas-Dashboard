@@ -1,54 +1,76 @@
 import streamlit as st
-# import matplotlib.pyplot as plt
 import datetime
 import pandas as pd
 import plotly.graph_objects as go
-import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import numpy as np
+from pathlib import Path
 TODAY = datetime.date.today()
 today_day = TODAY.strftime('%Y-%m-%d')
 
 st.set_page_config(layout="wide", page_title="Natural Gas Analysis")
 
 ##########  CREATING DATASETS ###############
-comcot_reports = pd.read_hdf('./datas/dash_storage.h5', key='natgas_cots',)
-natgas_yf = pd.read_hdf('./datas/dash_storage.h5', key='natgas', )
-comcot_reports.index = comcot_reports.index.set_levels(pd.to_datetime(comcot_reports.index.levels[1], format="%Y-%m-%d"), level=1)
+DATA_PATH = Path(__file__).resolve().parent / "datas" / "dash_storage.h5"
+
+@st.cache_data(show_spinner=False)
+def load_data(path: Path):
+    """Load HDF datasets and return (comcot_reports, natgas_yf).
+
+    Uses caching to avoid re-reading large files on every interaction.
+    """
+    comcot = pd.read_hdf(path, key='natgas_cots')
+    natgas = pd.read_hdf(path, key='natgas')
+    # Ensure second level of MultiIndex is datetime for consistent filtering
+    try:
+        comcot.index = comcot.index.set_levels(pd.to_datetime(comcot.index.levels[1], format="%Y-%m-%d"), level=1)
+    except Exception:
+        # If already datetime or structure changes, silently continue
+        pass
+    return comcot, natgas
+
+if not DATA_PATH.exists():
+    st.error(f"Data file not found: {DATA_PATH}. Please add the HDF5 file to 'datas/' directory.")
+    st.stop()
+
+try:
+    comcot_reports, natgas_yf = load_data(DATA_PATH)
+except Exception as e:
+    st.exception(e)
+    st.stop()
+
 com_starting_date = natgas_yf.index.min()
 com_ending_date = natgas_yf.index.max()
-com_date_range = pd.date_range(com_starting_date, com_ending_date)
 
 
-page_bg_img = f"""
+# Static bright background (#F5DEB3) and matching sidebar gradient
+page_bg_img = """
 <style>
-[data-testid="stAppViewContainer"] > .main {{
-background: linear-gradient(to bottom, #F5DEB3 0%,#F4A460 100%);
+[data-testid="stAppViewContainer"] > .main {
+background: #F5DEB3;
 background-position: top left;
-}}
+}
 
-        
-[data-testid="stHeader"] {{
+[data-testid="stHeader"] {
 background: rgba(0,0,0,0);
-}}
+}
 
-.stTabs [data-testid="stMarkdownContainer"] p {{
- background-color:"green"}}
+.stTabs [data-testid="stMarkdownContainer"] p {
+ background-color:transparent}
 
-.stTabs [data-baseweb="tab-list"] button [data-testid="stMarkdownContainer"] p {{
+.stTabs [data-baseweb="tab-list"] button [data-testid="stMarkdownContainer"] p {
     font-size:1.5rem;
     font:"serif";
-    }}
+    }
 
-[data-testid="stSidebar"] >  div:first-child {{
-background: linear-gradient(to bottom, #BDB76B  0%,#B8860B  100%); 
+[data-testid="stSidebar"] >  div:first-child {
+background: linear-gradient(to bottom, #BDB76B 0%, #B8860B 100%); 
 background-position: top left;
 background-attachment: fixed;
-}}
+}
 
-[data-testid="st.tabs"] >  div:first-child {{
-<h3></h3>
-}}
+[data-testid="st.tabs"] >  div:first-child {
+}
 
 </style>
 """
@@ -64,7 +86,22 @@ st.markdown(  """
 """, unsafe_allow_html=True)
 
 #side bar
-st.sidebar.image("datas/logo1.png")
+def _resolve_asset(*relative_segments: str):
+    """Return a Path to an existing asset trying several base folders."""
+    candidates = [
+        Path(__file__).resolve().parent.joinpath(*relative_segments),
+        Path.cwd().joinpath(*relative_segments),
+    ]
+    for p in candidates:
+        if p.exists():
+            return p
+    return None
+
+logo_path = _resolve_asset("datas", "logo1.png") or _resolve_asset("logo1.png")
+if logo_path:
+    st.sidebar.image(str(logo_path))
+else:
+    st.sidebar.warning("Logo not found (datas/logo1.png). Proceeding without it.")
 st.markdown(page_bg_img, unsafe_allow_html=True)
 
 st.markdown("""
@@ -112,7 +149,7 @@ natgas_close = natgas_yf["Close"]
 commodity = st.sidebar.selectbox("**COM TICKER**", (comcot_reports.index.get_level_values("ticker").unique()), label_visibility="collapsed")
 com_columns = st.sidebar.selectbox("**COT Ind full**", comcot_reports.columns, label_visibility="collapsed")
 
-    ############# NATGAS CLOSE PRICE CHART #################
+############# NATGAS CLOSE PRICE CHART #################
 
 fig101 = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.05, row_heights=[0.50, 0.50])
 start_time_nat = pd.to_datetime(start_nat, format="%Y-%m-%d")
@@ -139,7 +176,7 @@ fig101.add_annotation(text=f"NatGas Price",
     ########## PLOT COT REPORT #############
 
 cot_commodity = comcot_reports.loc[commodity]
-subset_cot_commodity = cot_commodity 
+subset_cot_commodity = cot_commodity
 final_com = subset_cot_commodity[com_columns]
 
 max_diff = final_com.max()
@@ -170,7 +207,8 @@ fig101.update_layout(paper_bgcolor='rgb(184, 247, 212)', plot_bgcolor='rgb(184, 
 fig101.update_layout(  paper_bgcolor='rgb(0,0,0,0)', 
                         plot_bgcolor='rgb(0,0,0,0)' )
 fig101.update_layout(  hovermode="x unified", 
-                        height = 1000  )
+                        height = 1000,
+                        margin=dict(l=40,r=40,t=40,b=40)  )
 fig101.update_traces(  xaxis='x1'  )
 
 fig101.for_each_xaxis(lambda x: x.update(showgrid=False))

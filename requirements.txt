@@ -1,7 +1,12 @@
 streamlit
-datetime
 pandas
-dash
 plotly
 numpy
-tables
+tables  # Provides PyTables (pytables) backend for pandas read_hdf
+
+# Removed 'dash' (not used) and 'datetime' (stdlib). Pin versions optionally, e.g.:
+# streamlit==1.38.0
+# pandas==2.2.2
+# plotly==5.23.0
+# numpy==1.26.4
+# tables==3.9.2
